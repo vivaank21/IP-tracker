@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terra Telemetry — Real-Time IP & Geolocation Intelligence</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet 2D Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Three.js for 3D Globe Telemetry -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body">
+
+  <!-- ================= AUTH GATE MODAL ================= -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-icon-wrap">
+        <span class="auth-glyph">🔒</span>
+      </div>
+      <h2 class="auth-title">Telemetry Intelligence</h2>
+      <p class="auth-subtitle">Enter administrator passkey to access real-time visitor intelligence</p>
+      
+      <form id="authForm" class="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div class="input-group">
+          <input 
+            type="password" 
+            id="adminKeyInput" 
+            class="auth-input" 
+            placeholder="Passkey (default: admin2026)" 
+            autocomplete="current-password" 
+            required 
+            autofocus
+          />
+          <button type="submit" class="auth-btn">Authorize</button>
+        </div>
+        <div class="auth-hint">
+          <span>Default key: <code>admin2026</code></span>
+          <button type="button" class="quick-fill-btn" onclick="quickFillPasskey()">Quick Fill</button>
+        </div>
+        <p id="authError" class="auth-error" style="display: none;"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MAIN ADMIN DASHBOARD ================= -->
+  <div class="dashboard-layout" id="dashboardLayout" style="display: none;">
+    
+    <!-- Top Header -->
+    <header class="dash-header">
+      <div class="header-left">
+        <div class="dash-logo">
+          <span class="logo-pulse"></span>
+          <h1>TERRA TELEMETRY</h1>
+          <span class="badge-live" id="streamStatusBadge">● LIVE SSE STREAMING</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Live Alert Sound Toggle -->
+        <button class="btn btn-secondary" id="btnAudioToggle" title="Toggle audio chime on new visitors">
+          <span id="audioIcon">🔔</span> Sound Alerts: <strong id="audioStatusText">ON</strong>
+        </button>
+
+        <button class="btn btn-secondary" id="btnRefresh" title="Manually refresh telemetry">
+          <span class="icon">↻</span> Refresh
+        </button>
+
+        <button class="btn btn-secondary" id="btnSeedDemo" title="Seed realistic visitors from US, UK, Japan, Germany, India, Australia">
+          <span class="icon">⚡</span> Seed Demo Data
+        </button>
+
+        <button class="btn btn-primary" id="btnExportCsv" title="Export records to CSV">
+          <span class="icon">📥</span> Export CSV
+        </button>
+
+        <button class="btn btn-danger" id="btnClearLogs" title="Clear all visitor records">
+          <span class="icon">🗑</span> Purge Logs
+        </button>
+
+        <a href="/" class="btn btn-ghost" target="_blank" title="Open visitor gallery view in new tab">
+          <span class="icon">↗</span> Public Gallery
+        </a>
+
+        <button class="btn btn-icon" id="btnLogout" title="Lock Dashboard">
+          <span>🔒</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Real-time Live Ticker Alert Banner -->
+    <div class="live-ticker-banner" id="liveTickerBanner" style="display: none;">
+      <div class="ticker-content">
+        <span class="ticker-pulse"></span>
+        <span class="ticker-text" id="tickerText">New visitor detected</span>
+      </div>
+      <button class="ticker-close" onclick="closeTicker()">✕</button>
+    </div>
+
+    <!-- Main Container -->
+    <main class="dash-content">
+
+      <!-- KPI Summary Cards -->
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">TOTAL ACCUMULATED HITS</span>
+            <span class="kpi-icon hits">📊</span>
+          </div>
+          <div class="kpi-value" id="kpiTotalHits">0</div>
+          <div class="kpi-footnote">Real-time session requests</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">UNIQUE VISITOR NODES (IPS)</span>
+            <span class="kpi-icon ips">🌐</span>
+          </div>
+          <div class="kpi-value" id="kpiUniqueIps">0</div>
+          <div class="kpi-footnote">Unique verified IP addresses</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">COUNTRIES DETECTED</span>
+            <span class="kpi-icon countries">🚩</span>
+          </div>
+          <div class="kpi-value" id="kpiCountries">0</div>
+          <div class="kpi-footnote">Global jurisdictions</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">ACTIVE SESSIONS (24H)</span>
+            <span class="kpi-icon active">⏱</span>
+          </div>
+          <div class="kpi-value" id="kpiLast24h">0</div>
+          <div class="kpi-footnote">Network traffic today</div>
+        </div>
+      </section>
+
+      <!-- Middle Section: World Map & 3D Globe & Analytics -->
+      <section class="map-analytics-section">
+        <!-- Interactive Map & 3D Globe View -->
+        <div class="map-card">
+          <div class="card-heading">
+            <div class="heading-title-group">
+              <h3>Geographic Telemetry Map</h3>
+              <p>GPS locations pinpointed via visitor IP addresses & client telemetry</p>
+            </div>
+            
+            <div class="map-view-switcher">
+              <button class="map-switch-btn active" id="btnMap2D">2D Street Map</button>
+              <button class="map-switch-btn" id="btnMap3D">🌐 3D Earth Sphere</button>
+            </div>
+          </div>
+
+          <!-- Leaflet 2D Map Container -->
+          <div class="map-container" id="visitorMap"></div>
+
+          <!-- Three.js 3D Globe Container -->
+          <div class="map-container" id="visitorGlobe3D" style="display: none;"></div>
+        </div>
+
+        <!-- Geographic & Device Breakdown Panel -->
+        <div class="analytics-card">
+          <div class="card-heading">
+            <h3>Geographic Origins</h3>
+          </div>
+          <div class="country-list" id="countryList">
+            <div class="empty-state">Awaiting country telemetry...</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="card-heading">
+            <h3>Hardware & Platforms</h3>
+          </div>
+          <div class="device-chips" id="deviceChips">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Bottom Section: Visitor Telemetry Log Table -->
+      <section class="table-section">
+        <div class="table-header-bar">
+          <div class="table-title-group">
+            <h3>Real-Time Visitor Telemetry Logs</h3>
+            <span class="log-count-badge" id="logCountBadge">0 records</span>
+          </div>
+
+          <!-- Search & Filter Controls -->
+          <div class="table-controls">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input 
+                type="text" 
+                id="tableSearchInput" 
+                placeholder="Search IP, Country, State, City, ISP..." 
+              />
+            </div>
+
+            <select id="countryFilterSelect" class="filter-select">
+              <option value="ALL">All Countries</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-wrapper">
+          <table class="telemetry-table" id="telemetryTable">
+            <thead>
+              <tr>
+                <th>Last Seen</th>
+                <th>IP Address</th>
+                <th>Country</th>
+                <th>State / Region</th>
+                <th>City</th>
+                <th>Map Coordinates</th>
+                <th>ISP / Organization</th>
+                <th>Device & OS</th>
+                <th>Hits</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="telemetryTbody">
+              <tr>
+                <td colspan="10" class="table-empty">Connecting to real-time telemetry stream...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= VISITOR DETAILS MODAL ================= -->
+  <div class="modal-backdrop" id="detailsModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modalTitle">Visitor Deep Telemetry</h3>
+        <button class="modal-close" onclick="closeDetailsModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Rendered via JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast-notice" id="toastNotice"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="admin.js"></script>
+</body>
+</html>

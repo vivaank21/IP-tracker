@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TERRA SANCTUM — Visions of the Earth</title>
+  <meta name="description" content="An international fine art exhibition presenting earth's most iconic landscapes with interactive 3D exploration and high-magnification inspection.">
+  
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Three.js for Interactive 3D World Globe -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <link rel="stylesheet" href="gallery.css">
+</head>
+<body>
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="gallery-header">
+    <div class="brand">
+      <div class="brand-badge">
+        <span class="brand-glyph">✦</span>
+        <span class="exhibition-tag">INTERNATIONAL EXHIBITION MMXXVI</span>
+      </div>
+      <h1 class="brand-title">TERRA SANCTUM</h1>
+      <p class="brand-subtitle">ARCHITECTURAL & GEOGRAPHICAL RETROSPECTIVE</p>
+    </div>
+
+    <!-- Navigation & View Modes -->
+    <div class="header-controls">
+      <!-- 3D View vs Gallery Grid Switcher -->
+      <div class="view-mode-toggle" role="tablist">
+        <button class="mode-btn active" id="btnViewGrid" title="Switch to Editorial Grid View">
+          <span class="icon">⊞</span> Gallery Grid
+        </button>
+        <button class="mode-btn" id="btnViewGlobe" title="Switch to Interactive 3D Earth Globe">
+          <span class="icon">🌐</span> Interactive 3D Globe
+        </button>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <nav class="filter-nav" id="categoryNav" aria-label="Place Categories">
+        <button class="filter-pill active" data-filter="all">All Sanctuaries</button>
+        <button class="filter-pill" data-filter="peaks">Highlands & Peaks</button>
+        <button class="filter-pill" data-filter="coastal">Coastal Vistas</button>
+        <button class="filter-pill" data-filter="ancient">Ancient Heritage</button>
+        <button class="filter-pill" data-filter="nordic">Nordic & Polar</button>
+        <button class="filter-pill" data-filter="oasis">Dunes & Desert</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ================= 3D EARTH GLOBE VIEW CONTAINER ================= -->
+  <section class="globe-view-container" id="globeContainer" style="display: none;">
+    <div class="globe-canvas-wrapper" id="globeCanvasWrapper">
+      <!-- Three.js Canvas injected here -->
+    </div>
+
+    <!-- 3D Interactive HUD Overlay -->
+    <div class="globe-hud">
+      <div class="hud-top">
+        <span class="hud-badge">● INTERACTIVE 3D EXPLORATION</span>
+        <span class="hud-tip">Click & Drag to Rotate Globe • Scroll to Zoom • Click Pins to Inspect Place</span>
+      </div>
+      <div class="globe-place-card" id="globePlaceCard" style="display: none;">
+        <span class="card-tag" id="globeCardCategory">Highlands</span>
+        <h3 class="card-name" id="globeCardTitle">Matterhorn Peak</h3>
+        <p class="card-loc" id="globeCardLocation">Zermatt, Switzerland</p>
+        <button class="btn-inspect-3d" id="btnInspect3D">🔍 Highly Magnified Inspection</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EDITORIAL GALLERY GRID ================= -->
+  <main class="gallery-container" id="gridContainer">
+    <div class="gallery-grid" id="galleryGrid">
+      <!-- Rendered dynamically with 3D tilt -->
+    </div>
+  </main>
+
+  <!-- ================= HIGH-MAGNIFICATION LIGHTBOX MODAL ================= -->
+  <div class="lightbox-modal" id="lightboxModal" aria-hidden="true" role="dialog">
+    <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+    <div class="lightbox-dialog">
+      <button class="lightbox-close" id="lightboxClose" aria-label="Close viewer">✕</button>
+      
+      <!-- Media Box with Interactive Magnifier Loupe -->
+      <div class="lightbox-media-wrapper" id="magnifierWrapper">
+        <img src="" alt="" class="lightbox-img" id="lightboxImg">
+        
+        <!-- High-Magnification Loupe Lens -->
+        <div class="magnifier-lens" id="magnifierLens">
+          <div class="lens-crosshair"></div>
+        </div>
+
+        <!-- Magnification Controls Floating Bar -->
+        <div class="magnifier-bar">
+          <span class="mag-label">HIGH MAGNIFICATION:</span>
+          <button class="mag-btn" id="mag2x" data-zoom="2">2.5× Zoom</button>
+          <button class="mag-btn active" id="mag3x" data-zoom="3.5">3.5× Ultra</button>
+          <button class="mag-btn" id="mag4x" data-zoom="5">5.0× Extreme</button>
+          <span class="mag-tip">Move cursor over image to inspect details</span>
+        </div>
+
+        <button class="lightbox-nav prev" id="lightboxPrev" aria-label="Previous">‹</button>
+        <button class="lightbox-nav next" id="lightboxNext" aria-label="Next">›</button>
+      </div>
+
+      <!-- Rich Place Metadata -->
+      <div class="lightbox-meta">
+        <div class="meta-primary">
+          <span class="meta-tag" id="lightboxCategory">Highlands</span>
+          <h2 class="meta-title" id="lightboxTitle">Matterhorn, Zermatt</h2>
+          <p class="meta-location" id="lightboxLocation">Valais Alps, Switzerland</p>
+        </div>
+        <p class="meta-description" id="lightboxDesc">
+          A timeless pyramid of rock and glacier rising 4,478 meters above the alpine plateau.
+        </p>
+        <div class="meta-specs">
+          <div class="spec-item">
+            <span class="spec-label">Coordinates</span>
+            <span class="spec-val" id="lightboxCoords">45.9763° N, 7.6586° E</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Elevation</span>
+            <span class="spec-val" id="lightboxElevation">4,478 m</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Atmosphere</span>
+            <span class="spec-val" id="lightboxAtmosphere">Alpine Dawn / Sub-Zero</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Discreet Footer with Admin Link -->
+  <footer class="gallery-footer">
+    <p class="footer-copy">© MMXXVI TERRA SANCTUM GALLERY • ARCHITECTURAL & GEOGRAPHICAL ARCHIVES</p>
+    <a href="/admin" class="admin-portal-link" title="Administration Console">✦ Curator Console</a>
+  </footer>
+
+  <script src="gallery.js"></script>
+</body>
+</html>
